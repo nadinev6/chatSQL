@@ -68,6 +68,9 @@ You will need an API key from either Google (for the Gemini model) or OpenAI to 
     ```
 
 
+## 📁 Project Structure
+
+```
 src/
 ├── components/
 │   ├── chat/
@@ -99,6 +102,7 @@ database-server/
 ├── tsconfig.json
 └── build/
     └── index.js
+```
 
 ## 🤝 Contributing
 
