@@ -20,7 +20,7 @@ ChatSQL is an AI-powered, web-based tool that allows users to design database sc
 *   **SQL Editor**: View, edit, copy, or download the generated SQL script.
 *   **Real-time Streaming Terminal**: Executes database operations directly on Tiger Data's PostgreSQL platform via MCP, with live streaming updates and progress indicators.
 *   **Configurable**: Easily switch between AI providers (Google Gemini, OpenAI) and configure API keys through the settings panel.
-*   **API Monitoring**: A dedicated panel to add and monitor the status of external API endpoints (mocked).
+*   **API Monitoring**: A dedicated panel to add and monitor the status of external API endpoints with real-time health checks, response times, and status tracking.
 
 ## 🚀 Getting Started
 

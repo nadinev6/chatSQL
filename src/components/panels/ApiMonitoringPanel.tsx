@@ -11,12 +11,91 @@ interface ApiMonitoringPanelProps {
 }
 
 const ApiMonitoringPanel: React.FC<ApiMonitoringPanelProps> = ({ endpoints }: ApiMonitoringPanelProps) => {
-    const eventLog = [
+    const [eventLog, setEventLog] = React.useState<Array<{time: string, event: string, message: string}>>([
         { time: '14:32:10', event: 'Response Handling', message: 'Result cached successfully.' },
         { time: '14:32:09', event: 'Execute Query', message: 'Query sent to Live API.' },
         { time: '14:32:08', event: 'Route Decision', message: 'API is live, routing to Live API.' },
         { time: '14:32:08', event: 'API Health Check', message: 'CoinGecko is available (200 OK).' },
-    ];
+    ]);
+
+    // Real API monitoring functionality
+    const checkApiHealth = async (url: string): Promise<{ status: string; responseTime?: number; error?: string }> => {
+        const startTime = Date.now();
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'ChatSQL-API-Monitor/1.0'
+                },
+                // Add timeout
+                signal: AbortSignal.timeout(10000) // 10 second timeout
+            });
+
+            const responseTime = Date.now() - startTime;
+
+            if (response.ok) {
+                return { status: 'Live', responseTime };
+            } else if (response.status === 429) {
+                return { status: 'Rate-Limited', responseTime };
+            } else {
+                return { status: 'Offline', responseTime, error: `HTTP ${response.status}` };
+            }
+        } catch (error) {
+            const responseTime = Date.now() - startTime;
+            if (error instanceof Error) {
+                if (error.name === 'AbortError') {
+                    return { status: 'Offline', responseTime, error: 'Timeout' };
+                }
+                return { status: 'Offline', responseTime, error: error.message };
+            }
+            return { status: 'Offline', responseTime, error: 'Unknown error' };
+        }
+    };
+
+    const addEventLog = (event: string, message: string) => {
+        const now = new Date();
+        const time = now.toLocaleTimeString('en-US', {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+
+        setEventLog((prev: Array<{time: string, event: string, message: string}>) => [{
+            time,
+            event,
+            message
+        }, ...prev.slice(0, 9)]); // Keep only last 10 events
+    };
+
+    // Monitor APIs periodically
+    React.useEffect(() => {
+        const monitorAPIs = async () => {
+            for (const endpoint of endpoints) {
+                try {
+                    const result = await checkApiHealth(endpoint.url);
+                    addEventLog('API Health Check', `${getHostname(endpoint.url)}: ${result.status}${result.responseTime ? ` (${result.responseTime}ms)` : ''}${result.error ? ` - ${result.error}` : ''}`);
+                } catch (error) {
+                    addEventLog('API Health Check', `${getHostname(endpoint.url)}: Failed to check`);
+                }
+            }
+        };
+
+        // Initial check
+        if (endpoints.length > 0) {
+            monitorAPIs();
+        }
+
+        // Set up periodic monitoring every 30 seconds
+        const interval = setInterval(() => {
+            if (endpoints.length > 0) {
+                monitorAPIs();
+            }
+        }, 30000);
+
+        return () => clearInterval(interval);
+    }, [endpoints]);
 
     const getStatusColor = (status?: string) => {
         switch (status) {
@@ -64,7 +143,7 @@ const ApiMonitoringPanel: React.FC<ApiMonitoringPanelProps> = ({ endpoints }: Ap
 
             <h3 className="text-lg font-sans font-semibold mt-2 mb-2 text-white">Event Log</h3>
             <div className="bg-gray-900 p-3 rounded-lg overflow-y-auto flex-1">
-                {eventLog.map((log, index) => (
+                {eventLog.map((log: {time: string, event: string, message: string}, index: number) => (
                     <p key={index}><span className="text-gray-500">{log.time}</span> <span className="text-blue-400">{log.event}:</span> <span className="text-gray-300">{log.message}</span></p>
                 ))}
             </div>
